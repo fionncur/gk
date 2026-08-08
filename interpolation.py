@@ -1,12 +1,18 @@
 """Periodic linear interpolation along one axis of an N-d array.
 
-For each index tuple, gathers along ``axis`` at a departure point:
+There are as many trajectories as arrival points (the N points of the
+uniform grid). Each is traced backward under the flow map for one time
+step, landing at a departure point ``x_star`` in some grid cell; the map
+need not be injective or surjective, so cells may receive zero, one, or
+several departure points. For each departure point this locates the
+bounding grid indices ``i0`` (left) and ``i1`` (right), gathers
+``f[i0]`` and ``f[i1]``, and blends them with the local coordinate ``a``:
 
     out[..., i, ...] = (1-a) * f[i0] + a * f[i1]
 
-with ``i0 = floor((x_star - X[0]) / dx)`` and ``a`` the fractional cell offset.
-This is the interpolation half of a backward semi-Lagrangian step: given the
-foot of a characteristic, return the field value there.
+with ``i0 = floor((x_star - X[0]) / dx)`` and ``a`` the fractional cell
+offset. This is the interpolation half of a backward semi-Lagrangian
+step: given the foot of a characteristic, return the field value there.
 """
 from __future__ import annotations
 
@@ -25,7 +31,7 @@ __all__ = ["interp1_linear_x"]
 def interp1_linear_x(
     f: Array,
     x_star: ArrayLike,  # Departure points. .shape must be broadcastable to f.shape
-    X: Array,  # Coordinate grid corresponding to f[axis]
+    X: Array,  # Coordinate array corresponding to f[axis]
     *,
     axis: int = 0,
     periodic: bool = True,
