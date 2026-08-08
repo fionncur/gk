@@ -14,6 +14,7 @@ with ``i0 = floor((x_star - X[0]) / dx)`` and ``a`` the fractional cell
 offset. This is the interpolation half of a backward semi-Lagrangian
 step: given the foot of a characteristic, return the field value there.
 """
+
 from __future__ import annotations
 
 from functools import partial
@@ -24,7 +25,7 @@ from jax.typing import ArrayLike
 
 Array = jax.Array
 
-__all__ = ["interp1_linear_x"]
+__all__ = ["interp1_linear_x", "interp2_bilinear_xy"]
 
 
 @partial(jax.jit, static_argnames=("axis", "periodic"))
@@ -68,6 +69,109 @@ def interp1_linear_x(
     f0 = jnp.take_along_axis(f, i0, axis=axis)
     f1 = jnp.take_along_axis(f, i1, axis=axis)
     out = (1.0 - a) * f0 + a * f1
+
+    if not periodic:
+        valid = jnp.broadcast_to(valid, f.shape)
+        out = jnp.where(valid, out, fill_value)
+
+    return out
+
+
+@partial(jax.jit, static_argnames=("axis_x", "axis_y", "periodic"))
+def interp2_bilinear_xy(
+    f: Array,
+    x_star: ArrayLike,  # Departure x-coords. .shape must be broadcastable to f.shape
+    y_star: ArrayLike,  # Departure y-coords. .shape must be broadcastable to f.shape
+    X: Array,  # Coordinate array corresponding to f[axis_x]
+    Y: Array,  # Coordinate array corresponding to f[axis_y]
+    *,
+    axis_x: int = 0,
+    axis_y: int = 1,
+    periodic: bool = True,
+    fill_value: float | ArrayLike = 0.0,
+) -> Array:
+    """Periodic bilinear interpolation over two axes of an N-d array.
+
+    Generalizes :func:`interp1_linear_x` to a genuine 2D departure point
+    ``(x_star, y_star)`` in the plane spanned by ``axis_x`` and ``axis_y``,
+    bounded by grid indices ``i0x``/``i1x`` and ``i0y``/``i1y`` with local
+    coordinates ``ax``, ``ay``. The four bounding corners are gathered
+    jointly from ``f``, in a single pass, and blended:
+
+        out = (1-ax)(1-ay) * f[i0x,i0y] + ax(1-ay) * f[i1x,i0y]
+            + (1-ax)ay * f[i0x,i1y] + ax*ay * f[i1x,i1y]
+
+    with ``i0x = floor((x_star - X[0]) / dx)`` and likewise for ``i0y``.
+    Any axes other than ``axis_x``/``axis_y`` (e.g. a velocity-space axis)
+    pass through unchanged, each of their slices interpolated
+    independently.
+    """
+    Nx = f.shape[axis_x]
+    Ny = f.shape[axis_y]
+    dx = X[1] - X[0]
+    dy = Y[1] - Y[0]
+    x0 = X[0]
+    y0 = Y[0]
+    Lx = dx * Nx
+    Ly = dy * Ny
+
+    if periodic:
+        xw = (x_star - x0) % Lx + x0
+        yw = (y_star - y0) % Ly + y0
+        valid = None
+    else:
+        xw = x_star
+        yw = y_star
+        valid = (xw >= x0) & (xw < x0 + Lx) & (yw >= y0) & (yw < y0 + Ly)
+
+    sx = (xw - x0) / dx
+    sy = (yw - y0) / dy
+    i0x = jnp.floor(sx).astype(jnp.int32)
+    i0y = jnp.floor(sy).astype(jnp.int32)
+    ax = sx - i0x
+    ay = sy - i0y
+
+    if periodic:
+        i0x, i1x = i0x % Nx, (i0x + 1) % Nx
+        i0y, i1y = i0y % Ny, (i0y + 1) % Ny
+    else:
+        i0x = jnp.clip(i0x, 0, Nx - 1)
+        i1x = jnp.clip(i0x + 1, 0, Nx - 1)
+        i0y = jnp.clip(i0y, 0, Ny - 1)
+        i1y = jnp.clip(i0y + 1, 0, Ny - 1)
+
+    i0x, i1x, i0y, i1y, ax, ay = (
+        jnp.broadcast_to(v, f.shape) for v in (i0x, i1x, i0y, i1y, ax, ay)
+    )
+
+    # The operators i0x[p,q], i0y[p,q], etc. in general depend on both coordinates
+    # of the grid points (p,q), so they cannot be factored as a sequence of 1D
+    # gathers (take_along_axis): each one holds every non-gathered axis fixed at
+    # the output position (p,q), so a second gather along axis_y would evaluate
+    # axis_x's index at the already-shifted y-position instead of the true q.
+    # Merging axis_x and axis_y into one flat axis lets a single gather apply the
+    # joint index i0x*Ny + i0y directly, computed from the true (p,q) throughout.
+
+    def merge(v):
+        m = jnp.moveaxis(v, (axis_x, axis_y), (-2, -1))
+        return m.reshape(m.shape[:-2] + (Nx * Ny,))
+
+    f_flat = merge(f)
+    f00 = jnp.take_along_axis(f_flat, merge(i0x * Ny + i0y), axis=-1)
+    f10 = jnp.take_along_axis(f_flat, merge(i1x * Ny + i0y), axis=-1)
+    f01 = jnp.take_along_axis(f_flat, merge(i0x * Ny + i1y), axis=-1)
+    f11 = jnp.take_along_axis(f_flat, merge(i1x * Ny + i1y), axis=-1)
+    ax_m, ay_m = merge(ax), merge(ay)
+
+    out_flat = (
+        (1.0 - ax_m) * (1.0 - ay_m) * f00
+        + ax_m * (1.0 - ay_m) * f10
+        + (1.0 - ax_m) * ay_m * f01
+        + ax_m * ay_m * f11
+    )
+    out = jnp.moveaxis(
+        out_flat.reshape(out_flat.shape[:-1] + (Nx, Ny)), (-2, -1), (axis_x, axis_y)
+    )
 
     if not periodic:
         valid = jnp.broadcast_to(valid, f.shape)
