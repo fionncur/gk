@@ -25,7 +25,7 @@ from jax.typing import ArrayLike
 
 Array = jax.Array
 
-__all__ = ["interp1_linear_x", "interp2_bilinear_xy"]
+__all__ = ["interp1_linear_x", "interp2_bilinear_xy", "INTERPOLATORS_2D"]
 
 
 @partial(jax.jit, static_argnames=("axis", "periodic"))
@@ -178,3 +178,8 @@ def interp2_bilinear_xy(
         out = jnp.where(valid, out, fill_value)
 
     return out
+
+
+INTERPOLATORS_2D = {
+    "bilinear": interp2_bilinear_xy,
+}
