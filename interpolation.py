@@ -23,6 +23,8 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
+from grid import Grid
+
 Array = jax.Array
 
 __all__ = ["interp1_linear_x", "interp2_bilinear_xy", "INTERPOLATORS_2D"]
@@ -77,41 +79,39 @@ def interp1_linear_x(
     return out
 
 
-@partial(jax.jit, static_argnames=("axis_x", "axis_y", "periodic"))
+@jax.jit
 def interp2_bilinear_xy(
     f: Array,
     x_star: ArrayLike,  # Departure x-coords. .shape must be broadcastable to f.shape
     y_star: ArrayLike,  # Departure y-coords. .shape must be broadcastable to f.shape
-    X: Array,  # Coordinate array corresponding to f[axis_x]
-    Y: Array,  # Coordinate array corresponding to f[axis_y]
+    grid: Grid,
     *,
-    axis_x: int = 0,
-    axis_y: int = 1,
-    periodic: bool = True,
     fill_value: float | ArrayLike = 0.0,
 ) -> Array:
     """Periodic bilinear interpolation over two axes of an N-d array.
 
     Generalizes :func:`interp1_linear_x` to a genuine 2D departure point
-    ``(x_star, y_star)`` in the plane spanned by ``axis_x`` and ``axis_y``,
-    bounded by grid indices ``i0x``/``i1x`` and ``i0y``/``i1y`` with local
-    coordinates ``ax``, ``ay``. The four bounding corners are gathered
-    jointly from ``f``, in a single pass, and blended:
+    ``(x_star, y_star)`` in the plane spanned by ``grid.axis_x`` and
+    ``grid.axis_y``, bounded by grid indices ``i0x``/``i1x`` and
+    ``i0y``/``i1y`` with local coordinates ``ax``, ``ay``. The four
+    bounding corners are gathered jointly from ``f``, in a single pass,
+    and blended:
 
         out = (1-ax)(1-ay) * f[i0x,i0y] + ax(1-ay) * f[i1x,i0y]
             + (1-ax)ay * f[i0x,i1y] + ax*ay * f[i1x,i1y]
 
-    with ``i0x = floor((x_star - X[0]) / dx)`` and likewise for ``i0y``.
-    Any axes other than ``axis_x``/``axis_y`` (e.g. a velocity-space axis)
-    pass through unchanged, each of their slices interpolated
-    independently.
+    with ``i0x = floor((x_star - grid.X[0]) / grid.dx)`` and likewise for
+    ``i0y``. Any axes other than ``grid.axis_x``/``grid.axis_y`` (e.g. a
+    velocity-space axis) pass through unchanged, each of their slices
+    interpolated independently.
     """
+    axis_x, axis_y, periodic = grid.axis_x, grid.axis_y, grid.periodic
     Nx = f.shape[axis_x]
     Ny = f.shape[axis_y]
-    dx = X[1] - X[0]
-    dy = Y[1] - Y[0]
-    x0 = X[0]
-    y0 = Y[0]
+    dx = grid.dx
+    dy = grid.dy
+    x0 = grid.x0
+    y0 = grid.y0
     Lx = dx * Nx
     Ly = dy * Ny
 

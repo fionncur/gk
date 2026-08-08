@@ -15,6 +15,7 @@ from functools import partial
 import jax
 from jax.typing import ArrayLike
 
+from grid import Grid
 from interpolation import INTERPOLATORS_2D
 
 Array = jax.Array
@@ -33,63 +34,41 @@ def _trace_euler(ux, uy, x_grid, y_grid, dt):
 
 
 # Each entry maps (ux, uy, x_grid, y_grid, dt) to a departure point
-# (x_star, y_star). 
+# (x_star, y_star).
 TRACE_METHODS = {
     "euler": _trace_euler,
 }
 
 
-@partial(jax.jit, static_argnames=("axis_x", "axis_y", "method"))
+@partial(jax.jit, static_argnames=("method",))
 def trace_characteristics(
     ux: Array,
     uy: Array,
-    X: Array,  # Coordinate array corresponding to ux/uy's axis_x
-    Y: Array,  # Coordinate array corresponding to ux/uy's axis_y
+    grid: Grid,
     dt: float | ArrayLike,
     *,
-    axis_x: int = 0,
-    axis_y: int = 1,
     method: str = "euler",
 ) -> tuple[Array, Array]:
     """Trace each grid point backward one time step to its departure point."""
     ndim = ux.ndim
-    x_grid = X.reshape(_grid_shape(X.shape[0], axis_x, ndim))
-    y_grid = Y.reshape(_grid_shape(Y.shape[0], axis_y, ndim))
+    x_grid = grid.X.reshape(_grid_shape(grid.Nx, grid.axis_x, ndim))
+    y_grid = grid.Y.reshape(_grid_shape(grid.Ny, grid.axis_y, ndim))
     return TRACE_METHODS[method](ux, uy, x_grid, y_grid, dt)
 
 
-@partial(
-    jax.jit,
-    static_argnames=("axis_x", "axis_y", "trace_method", "interp_method", "periodic"),
-)
+@partial(jax.jit, static_argnames=("trace_method", "interp_method"))
 def advect(
     f: Array,
     ux: Array,
     uy: Array,
-    X: Array,
-    Y: Array,
+    grid: Grid,
     dt: float | ArrayLike,
     *,
-    axis_x: int = 0,
-    axis_y: int = 1,
     trace_method: str = "euler",
     interp_method: str = "bilinear",
-    periodic: bool = True,
     fill_value: float | ArrayLike = 0.0,
 ) -> Array:
     """Advect ``f`` by tracing characteristics, then interpolating there."""
-    x_star, y_star = trace_characteristics(
-        ux, uy, X, Y, dt, axis_x=axis_x, axis_y=axis_y, method=trace_method
-    )
+    x_star, y_star = trace_characteristics(ux, uy, grid, dt, method=trace_method)
     interp = INTERPOLATORS_2D[interp_method]
-    return interp(
-        f,
-        x_star,
-        y_star,
-        X,
-        Y,
-        axis_x=axis_x,
-        axis_y=axis_y,
-        periodic=periodic,
-        fill_value=fill_value,
-    )
+    return interp(f, x_star, y_star, grid, fill_value=fill_value)
