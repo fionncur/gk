@@ -22,7 +22,7 @@ Covers: module docstring.
 
 ![Figure 1](png/fig01-backward-step.png)
 
-Every arrival point $x_i$ of the uniform grid follows one trajectory, traced backward through the flow map for one step to a departure point $x^{*}_i$. On cells the discrete map is neither injective nor surjective. The first two cells receive two departure points each, cells $[x_4,x_5)$ and $[x_8,x_9)$ receive none. Each departure point evaluates $f$ on the bracketing grid indices (gathers) independently. The highlighted trajectory from $x_4$ lands at $x^{*}_4$ in $[x_2,x_3)$, giving $i_0=2$, $i_1=3$, $a=0.55$; Fig. 2 shows that cell enlarged. The updated $f$ is an interpolation at the departure point $x^{*}_i$, computed from the time-stepped flow map $X(t^n; x_i, t^{n+1})$ determined by the characteristic equation. The open circle is the ghost point closing the periodic domain.
+Every arrival point $x_i$ of the uniform grid follows one trajectory, traced backward through the flow map for one step to a departure point $x^{\ast}_i$. On cells the discrete map is neither injective nor surjective. The first two cells receive two departure points each, cells $[x_4,x_5)$ and $[x_8,x_9)$ receive none. Each departure point evaluates $f$ on the bracketing grid indices (gathers) independently. The highlighted trajectory from $x_4$ lands at $x^{\ast}s_4$ in $[x_2,x_3)$, giving $i_0=2$, $i_1=3$, $a=0.55$; Fig. 2 shows that cell enlarged. The updated $f$ is an interpolation at the departure point $x^{\ast}_i$, computed from the time-stepped flow map $X(t^n; x_i, t^{n+1})$ determined by the characteristic equation. The open circle is the ghost point closing the periodic domain.
 
 [source](tikz/fig01-backward-step.tex) · [pdf](tikz/fig01-backward-step.pdf)
 
@@ -82,7 +82,7 @@ Covers: the flattening comment in `interp2_bilinear_xy`.
 
 ![Figure 6](png/fig06-flat-gather.png)
 
-Flattening `axis_x` and `axis_y` into a single axis of length $N_xN_y$ turns the index pair $(i_{0x},i_{0y})$ into the one index $p=i_{0x}N_y+i_{0y}$. Four corners means four such gathers, with $p\in\{i_{0x}N_y{+}i_{0y},$ $i_{1x}N_y{+}i_{0y},$ $i_{0x}N_y{+}i_{1y},$ $i_{1x}N_y{+}i_{1y}\}$, all reading the same `f_flat`.
+Flattening `axis_x` and `axis_y` into a single axis of length $N_x N_y$ turns the index pair $(i_{0 x},i_{0 y})$ into the one index $p=i_{0 x} N_y+i_{0 y}$. Four corners means four such gathers, with $p\in \lbrace i_{0 x}N_y+i_{0 y},\, i_{1 x} N_y+i_{0 y},\, i_{0 x}N_y+i_{1 y},\, i_{1 x} N_y+i_{1 y} \rbrace $, all reading the same `f_flat`.
 
 [source](tikz/fig06-flat-gather.tex) · [pdf](tikz/fig06-flat-gather.pdf)
 
