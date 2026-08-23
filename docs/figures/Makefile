@@ -7,7 +7,7 @@
 
 TEXDIR  := tikz
 PNGDIR  := png
-DPI     ?= 190
+DPI     ?= 800
 
 SRCS := $(wildcard $(TEXDIR)/fig*.tex)
 PDFS := $(SRCS:.tex=.pdf)
