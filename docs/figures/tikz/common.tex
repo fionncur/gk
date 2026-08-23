@@ -1,0 +1,27 @@
+% Shared preamble for the interpolation-geometry figures.
+% \input by every figNN-*.tex. 
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{shapes.misc,arrows.meta,calc,decorations.pathreplacing,positioning,fit,backgrounds}
+
+\definecolor{ink}{HTML}{1A1A1A}
+\definecolor{gridc}{HTML}{9AA3AD}
+\definecolor{accent}{HTML}{1F5FA9}
+\definecolor{good}{HTML}{2E7D4F}
+\definecolor{bad}{HTML}{B03030}
+\definecolor{soft}{HTML}{E6EDF7}
+\definecolor{softg}{HTML}{E3F0E8}
+\definecolor{softr}{HTML}{F8E6E6}
+\definecolor{amber}{HTML}{B8860B}
+
+
+\tikzset{
+  gpt/.style={circle,fill=ink,inner sep=1.15pt},
+  ghost/.style={circle,draw=gridc,fill=white,inner sep=1.15pt},
+  dep/.style={cross out,draw=accent,thick,inner sep=1.6pt,minimum size=4pt},
+  traj/.style={gridc,dotted,thick,-{Stealth[length=2mm]}},
+  htraj/.style={accent,very thick,-{Stealth[length=2.6mm]}},
+  lbl/.style={font=\footnotesize},
+  slbl/.style={font=\scriptsize},
+}

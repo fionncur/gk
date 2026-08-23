@@ -2,3 +2,10 @@
 !README.md
 *.pyc
 .venv/
+
+# LaTeX build
+docs/figures/tikz/*.aux
+docs/figures/tikz/*.log
+docs/figures/tikz/*.fls
+docs/figures/tikz/*.fdb_latexmk
+docs/figures/tikz/*.synctex.gz

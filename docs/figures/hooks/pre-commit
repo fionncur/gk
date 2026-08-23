@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Rebuild figures when their sources are staged, and stage the results.
+# Install with:  git config core.hooksPath docs/figures/hooks
+# Skip once with: git commit --no-verify
+set -euo pipefail
+
+changed=$(git diff --cached --name-only --diff-filter=ACM -- 'docs/figures/tikz/*.tex')
+[ -z "$changed" ] && exit 0
+
+if ! command -v latexmk >/dev/null || ! command -v pdftoppm >/dev/null; then
+  echo "pre-commit: latexmk or pdftoppm missing — figures NOT rebuilt." >&2
+  echo "            install TeX Live + poppler-utils, or commit with --no-verify." >&2
+  exit 1
+fi
+
+echo "pre-commit: rebuilding figures"
+make -C docs/figures >/dev/null
+
+git add docs/figures/tikz/*.pdf docs/figures/png/*.png
